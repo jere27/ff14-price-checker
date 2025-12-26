@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>FF14 原価チェッカー</title>
+<title>FF14 宝薬G4 原価チェッカー</title>
 
 <style>
 /* ---- ベース ---- */
@@ -57,6 +57,7 @@ button:hover {
   border-radius: 14px;
   padding: 22px;
   box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+  margin-bottom: 30px;
 }
 
 /* ---- 見出し ---- */
@@ -135,7 +136,7 @@ button:hover {
 
 <div class="container">
 
-  <h1>FF14　原価チェッカー</h1>
+  <h1>FF14 宝薬G4 原価チェッカー</h1>
 
   <div class="controls">
     <select id="recipe">
@@ -166,100 +167,4 @@ const RECIPES = {
     materials: [
       { id: 49228, name: "イヨラエキス" },
       { id: 44051, name: "大聖水" },
-      { id: 44039, name: "ウィンドパセリ" },
-      { id: 46246, name: "紫電の霊砂" }
-    ]
-  },
-  shinryoku: {
-    name: "心力の宝薬G4",
-    marketId: null,
-    materials: [
-      { id: 49228, name: "イヨラエキス" },
-      { id: 44051, name: "大聖水" },
-      { id: 44043, name: "パールグラス" },
-      { id: 46246, name: "紫電の霊砂" }
-    ]
-  }
-};
-
-async function fetchAvg(dc, id) {
-  const r = await fetch(`https://universalis.app/api/v2/${dc}/${id}`);
-  if (!r.ok) return null;
-  const d = await r.json();
-  const list = d.listings || [];
-  if (!list.length) return null;
-
-  const hq = list.filter(i => i.hq);
-  const use = hq.length ? hq : list;
-
-  const prices = use
-    .sort((a,b) => a.pricePerUnit - b.pricePerUnit)
-    .slice(0,10)
-    .map(i => i.pricePerUnit);
-
-  return Math.round(prices.reduce((a,b)=>a+b,0) / prices.length);
-}
-
-async function fetchAll() {
-  const recipe = RECIPES[document.getElementById("recipe").value];
-  const dc = document.getElementById("dc").value;
-  const result = document.getElementById("result");
-
-  result.innerHTML = `<div class="card"><h2>${recipe.name}</h2></div>`;
-  const card = result.querySelector(".card");
-
-  let sell = null;
-  if (recipe.marketId) {
-    sell = await fetchAvg(dc, recipe.marketId);
-  }
-
-  let cost = 0;
-  const mats = [];
-
-  for (const m of recipe.materials) {
-    const p = await fetchAvg(dc, m.id);
-    if (p !== null) {
-      cost += p;
-      mats.push({ name: m.name, price: p });
-    }
-  }
-
-  const profit = sell !== null ? sell * OUTPUT - cost : null;
-
-  card.innerHTML += `
-    <div class="note">※ 1回の製作で${OUTPUT}個完成します</div>
-
-    <div class="price-box">
-      <div class="price-item">
-        <div class="price-label">販売相場（1個）</div>
-        <div class="price-value">${sell ? sell.toLocaleString() : "―"} ギル</div>
-      </div>
-      <div class="price-item">
-        <div class="price-label">原価（1回分）</div>
-        <div class="price-value">${cost.toLocaleString()} ギル</div>
-      </div>
-    </div>
-
-    <h3>素材（1回分）</h3>
-    <div class="materials">
-      ${mats.map(m =>
-        `<div class="material">
-          <span>${m.name}</span>
-          <span>${m.price.toLocaleString()} ギル</span>
-        </div>`
-      ).join("")}
-    </div>
-
-    ${profit !== null ? `
-      <div class="profit ${profit >= 0 ? "plus" : "minus"}">
-        利益（1回分）：${profit.toLocaleString()} ギル
-      </div>
-    ` : ""}
-  `;
-}
-
-document.getElementById("fetchBtn").addEventListener("click", fetchAll);
-</script>
-
-</body>
-</html>
+      { id: 440
