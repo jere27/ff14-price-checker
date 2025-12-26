@@ -1,144 +1,123 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <title>FF14 宝薬G4 原価・利益チェッカー</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      padding: 20px;
-      max-width: 750px;
-    }
-    select, button {
-      padding: 8px;
-      font-size: 14px;
-      margin-right: 5px;
-    }
-    .materials {
-      margin-left: 20px;
-      margin-top: 10px;
-      line-height: 1.9;
-    }
-    .section {
-      margin-top: 15px;
-    }
-    .note {
-      color: #555;
-      font-size: 13px;
-    }
-    .strong {
-      font-weight: bold;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>FF14 宝薬G4 原価計算</title>
+<style>
+body { font-family: sans-serif; padding: 20px; max-width: 700px; }
+button, select { padding: 8px; margin-right: 5px; }
+.materials { margin-left: 20px; line-height: 1.8; }
+.note { color: #555; font-size: 13px; }
+</style>
 </head>
+
 <body>
 
 <h1>FF14 宝薬G4 原価・利益チェッカー</h1>
 
-<label>
-  宝薬：
-  <select id="recipe-select">
-    <option value="goryoku">剛力の宝薬G4</option>
-    <option value="shinryoku">心力の宝薬G4</option>
-  </select>
-</label>
+<select id="recipe">
+  <option value="goryoku">剛力の宝薬G4</option>
+  <option value="shinryoku">心力の宝薬G4</option>
+</select>
 
-<label>
-  DC：
-  <select id="dc-select">
-    <option value="Mana">Mana</option>
-    <option value="Gaia">Gaia</option>
-    <option value="Elemental">Elemental</option>
-    <option value="Meteor">Meteor</option>
-  </select>
-</label>
+<select id="dc">
+  <option value="Mana">Mana</option>
+  <option value="Gaia">Gaia</option>
+  <option value="Elemental">Elemental</option>
+  <option value="Meteor">Meteor</option>
+</select>
 
 <button onclick="fetchAll()">価格取得</button>
 
 <div id="result"></div>
 
 <script>
-  const OUTPUT_COUNT = 3; // 1回の製作でできる個数
+const OUTPUT = 3;
 
-  const RECIPES = {
-    goryoku: {
-      name: "剛力の宝薬G4",
-      marketId: 49234,
-      materials: [
-        { id: 49228, name: "イヨラエキス" },
-        { id: 44051, name: "大聖水" },
-        { id: 44039, name: "ウィンドパセリ" },
-        { id: 46246, name: "紫電の霊砂" }
-      ]
-    },
-    shinryoku: {
-      name: "心力の宝薬G4",
-      marketId: null,
-      materials: [
-        { id: 49228, name: "イヨラエキス" },
-        { id: 44051, name: "大聖水" },
-        { id: 44043, name: "パールグラス" },
-        { id: 46246, name: "紫電の霊砂" }
-      ]
+const RECIPES = {
+  goryoku: {
+    name: "剛力の宝薬G4",
+    marketId: 49234,
+    materials: [
+      { id: 49228, name: "イヨラエキス" },
+      { id: 44051, name: "大聖水" },
+      { id: 44039, name: "ウィンドパセリ" },
+      { id: 46246, name: "紫電の霊砂" }
+    ]
+  },
+  shinryoku: {
+    name: "心力の宝薬G4",
+    marketId: null,
+    materials: [
+      { id: 49228, name: "イヨラエキス" },
+      { id: 44051, name: "大聖水" },
+      { id: 44043, name: "パールグラス" },
+      { id: 46246, name: "紫電の霊砂" }
+    ]
+  }
+};
+
+async function fetchAvg(dc, id) {
+  const r = await fetch(`https://universalis.app/api/v2/${dc}/${id}`);
+  if (!r.ok) return null;
+  const d = await r.json();
+  const list = d.listings || [];
+  if (!list.length) return null;
+
+  const hq = list.filter(x => x.hq);
+  const use = hq.length ? hq : list;
+
+  const prices = use
+    .sort((a,b) => a.pricePerUnit - b.pricePerUnit)
+    .slice(0,10)
+    .map(x => x.pricePerUnit);
+
+  return Math.round(prices.reduce((a,b)=>a+b,0)/prices.length);
+}
+
+async function fetchAll() {
+  const recipe = RECIPES[document.getElementById("recipe").value];
+  const dc = document.getElementById("dc").value;
+  const res = document.getElementById("result");
+
+  res.innerHTML = `
+    <h2>${recipe.name}</h2>
+    <div class="note">※ 1回の製作で ${OUTPUT} 個完成</div>
+    <div class="materials"></div>
+  `;
+
+  let cost = 0;
+  const m = res.querySelector(".materials");
+
+  for (const item of recipe.materials) {
+    const p = await fetchAvg(dc, item.id);
+    if (p !== null) {
+      cost += p;
+      m.innerHTML += `・${item.name}　${p.toLocaleString()} ギル<br>`;
+    } else {
+      m.innerHTML += `・${item.name}　取得失敗<br>`;
     }
-  };
-
-  async function fetchAvgPrice(dc, id) {
-    const res = await fetch(`https://universalis.app/api/v2/${dc}/${id}`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    const listings = data.listings || [];
-    if (!listings.length) return null;
-
-    const hq = listings.filter(i => i.hq);
-    const nq = listings.filter(i => !i.hq);
-    const target = hq.length ? hq : nq;
-
-    const prices = target
-      .sort((a,b) => a.pricePerUnit - b.pricePerUnit)
-      .slice(0,10)
-      .map(i => i.pricePerUnit);
-
-    return Math.round(prices.reduce((a,b) => a+b,0) / prices.length);
   }
 
-  async function fetchAll() {
-    const recipe = RECIPES[document.getElementById("recipe-select").value];
-    const dc = document.getElementById("dc-select").value;
-    const result = document.getElementById("result");
+  const per = Math.round(cost / OUTPUT);
 
-    result.innerHTML = `
-      <h2>${recipe.name}</h2>
-      <div class="note">※ 1回の製作で <strong>${OUTPUT_COUNT}個</strong> 完成します</div>
-      <div class="section strong">DC：${dc}</div>
-      <div class="section strong">素材価格（1回分）</div>
-      <div class="materials"></div>
-    `;
+  res.innerHTML += `
+    <p><strong>製作原価（${OUTPUT}個分）：${cost.toLocaleString()} ギル</strong></p>
+    <p>1個あたり原価：${per.toLocaleString()} ギル</p>
+  `;
 
-    let cost = 0;
-    const matDiv = result.querySelector(".materials");
-
-    for (const item of recipe.materials) {
-      const price = await fetchAvgPrice(dc, item.id);
-      if (price !== null) {
-        cost += price;
-        matDiv.innerHTML += `・${item.name}　${price.toLocaleString()} ギル<br>`;
-      } else {
-        matDiv.innerHTML += `・${item.name}　データなし<br>`;
-      }
+  if (recipe.marketId) {
+    const sell = await fetchAvg(dc, recipe.marketId);
+    if (sell !== null) {
+      const profit = sell * OUTPUT - cost;
+      res.innerHTML += `
+        <p><strong>販売平均価格（1個）：${sell.toLocaleString()} ギル</strong></p>
+        <p><strong>利益：${profit.toLocaleString()} ギル</strong></p>
+      `;
     }
+  }
+}
+</script>
 
-    const perItemCost = Math.round(cost / OUTPUT_COUNT);
-
-    result.innerHTML += `
-      <div class="section strong">製作原価（${OUTPUT_COUNT}個分）：${cost.toLocaleString()} ギル</div>
-      <div class="section">1個あたり原価：${perItemCost.toLocaleString()} ギル</div>
-    `;
-
-    if (recipe.marketId) {
-      const sell = await fetchAvgPrice(dc, recipe.marketId);
-      if (sell !== null) {
-        const revenue = sell * OUTPUT_COUNT;
-        const profit = revenue - cost;
-        result.innerHTML += `
-          <d
+</body>
+</html>
