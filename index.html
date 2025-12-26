@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>剛力の宝薬G4 原価計算</title>
+  <title>剛力の宝薬G4 素材原価</title>
   <style>
     body {
       font-family: sans-serif;
@@ -13,20 +13,27 @@
       padding: 8px;
       font-size: 14px;
     }
-    .item {
+    .materials {
       margin-left: 20px;
-      line-height: 1.8;
+      margin-top: 10px;
+      line-height: 1.9;
     }
     .total {
       margin-top: 15px;
       font-weight: bold;
       font-size: 16px;
     }
+    .note {
+      color: #555;
+      font-size: 13px;
+      margin-top: 5px;
+    }
   </style>
 </head>
 <body>
 
 <h1>剛力の宝薬G4</h1>
+<div class="note">※ 以下は「剛力の宝薬G4」を作成するための素材価格です</div>
 
 <label>
   DC：
@@ -43,7 +50,7 @@
 <div id="result"></div>
 
 <script>
-  // ===== 剛力の宝薬G4 素材 =====
+  // 剛力の宝薬G4 の素材
   const MATERIALS = [
     { id: 49228, name: "イヨラエキス" },
     { id: 44051, name: "大聖水" },
@@ -78,8 +85,12 @@
     const dc = document.getElementById("dc-select").value;
     const resultDiv = document.getElementById("result");
 
-    resultDiv.innerHTML = `<h2>${dc} DC</h2>`;
+    resultDiv.innerHTML = `
+      <h2>${dc} DC</h2>
+      <div class="materials"></div>
+    `;
 
+    const materialsDiv = resultDiv.querySelector(".materials");
     let totalCost = 0;
 
     for (const item of MATERIALS) {
@@ -87,11 +98,11 @@
 
       if (price !== null) {
         totalCost += price;
-        resultDiv.innerHTML +=
-          `<div class="item">・${item.name}　${price.toLocaleString()} ギル</div>`;
+        materialsDiv.innerHTML +=
+          `・${item.name}　${price.toLocaleString()} ギル<br>`;
       } else {
-        resultDiv.innerHTML +=
-          `<div class="item">・${item.name}　データなし</div>`;
+        materialsDiv.innerHTML +=
+          `・${item.name}　データなし<br>`;
       }
     }
 
@@ -99,6 +110,3 @@
       `<div class="total">原価合計：${totalCost.toLocaleString()} ギル</div>`;
   }
 </script>
-
-</body>
-</html>
