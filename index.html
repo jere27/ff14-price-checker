@@ -2,15 +2,12 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>FF14 アイテム価格チェッカー</title>
+  <title>FF14 HQアイテム価格チェッカー</title>
   <style>
     body {
       font-family: sans-serif;
       padding: 20px;
-      max-width: 600px;
-    }
-    h1 {
-      margin-bottom: 10px;
+      max-width: 650px;
     }
     select, button {
       padding: 8px;
@@ -24,7 +21,7 @@
 </head>
 <body>
 
-  <h1>FF14 アイテム価格チェック</h1>
+  <h1>FF14 HQアイテム価格チェック</h1>
 
   <!-- DC選択 -->
   <label>
@@ -45,7 +42,7 @@
     <select id="item-select"></select>
   </label>
 
-  <button onclick="fetchPrice()">価格取得</button>
+  <button onclick="fetchPrice()">価格取得（HQのみ）</button>
 
   <h2 id="average"></h2>
   <ul id="list"></ul>
@@ -57,7 +54,7 @@
       { id: 44051, name: "（ID:44051 のアイテム）" }
     ];
 
-    // 初期化：アイテムプルダウンを作る
+    // 初期化
     function initItems() {
       const select = document.getElementById("item-select");
       ITEMS.forEach(item => {
@@ -87,8 +84,16 @@
           return;
         }
 
+        // 🔽 HQのみ抽出
+        const hqOnly = data.listings.filter(item => item.hq === true);
+
+        if (hqOnly.length === 0) {
+          alert("HQ出品がありません");
+          return;
+        }
+
         // 安い順に10件
-        const sorted = data.listings
+        const sorted = hqOnly
           .sort((a, b) => a.pricePerUnit - b.pricePerUnit)
           .slice(0, 10);
 
@@ -99,11 +104,14 @@
         // 表示
         document.getElementById("list").innerHTML =
           sorted.map(i =>
-            `<li>${i.pricePerUnit.toLocaleString()} ギル（${i.worldName}）</li>`
+            `<li>
+              ${i.pricePerUnit.toLocaleString()} ギル
+              （${i.worldName} / HQ）
+            </li>`
           ).join("");
 
         document.getElementById("average").textContent =
-          `安値10件の平均価格：${average.toLocaleString()} ギル`;
+          `HQ安値${sorted.length}件の平均価格：${average.toLocaleString()} ギル`;
 
       } catch (e) {
         console.error(e);
@@ -111,7 +119,6 @@
       }
     }
 
-    // ページ読み込み時に初期化
     window.onload = initItems;
   </script>
 
