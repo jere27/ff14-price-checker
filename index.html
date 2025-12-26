@@ -9,6 +9,7 @@ select, button { padding: 8px; margin-right: 5px; }
 .materials { margin-left: 20px; line-height: 1.8; }
 .note { color: #555; font-size: 13px; }
 .price { font-weight: bold; }
+.profit { font-weight: bold; color: darkgreen; }
 </style>
 </head>
 
@@ -33,6 +34,8 @@ select, button { padding: 8px; margin-right: 5px; }
 <div id="result"></div>
 
 <script>
+const OUTPUT_COUNT = 3;
+
 const RECIPES = {
   goryoku: {
     name: "剛力の宝薬G4",
@@ -81,15 +84,18 @@ async function fetchAll() {
 
   result.innerHTML = `<h2>${recipe.name}</h2>`;
 
+  let sellPrice = null;
   if (recipe.marketId) {
-    const sell = await fetchAvg(dc, recipe.marketId);
-    if (sell !== null) {
-      result.innerHTML += `<div class="price">販売相場（1個）：${sell.toLocaleString()} ギル</div>`;
+    sellPrice = await fetchAvg(dc, recipe.marketId);
+    if (sellPrice !== null) {
+      result.innerHTML += `
+        <div class="price">販売相場（1個）：${sellPrice.toLocaleString()} ギル</div>
+      `;
     }
   }
 
   result.innerHTML += `
-    <div class="note">※ 1回の製作で3個完成します</div>
+    <div class="note">※ 1回の製作で${OUTPUT_COUNT}個完成します</div>
     <h3>素材（1回分）</h3>
     <div class="materials"></div>
   `;
@@ -108,9 +114,15 @@ async function fetchAll() {
   }
 
   result.innerHTML += `<h3>原価（1回分）：${cost.toLocaleString()} ギル</h3>`;
+
+  if (sellPrice !== null) {
+    const profit = sellPrice * OUTPUT_COUNT - cost;
+    result.innerHTML += `
+      <h3 class="profit">利益（1回分）：${profit.toLocaleString()} ギル</h3>
+    `;
+  }
 }
 
-// 🔴 ここが重要：ボタンとJSを接続
 document.getElementById("fetchBtn").addEventListener("click", fetchAll);
 </script>
 
