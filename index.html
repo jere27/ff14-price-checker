@@ -7,7 +7,7 @@
     body {
       font-family: sans-serif;
       padding: 20px;
-      max-width: 700px;
+      max-width: 750px;
     }
     select, button {
       padding: 8px;
@@ -22,7 +22,11 @@
     .section {
       margin-top: 15px;
     }
-    .label {
+    .note {
+      color: #555;
+      font-size: 13px;
+    }
+    .strong {
       font-weight: bold;
     }
   </style>
@@ -54,7 +58,8 @@
 <div id="result"></div>
 
 <script>
-  // ===== 各レシピ =====
+  const OUTPUT_COUNT = 3; // 1回の製作でできる個数
+
   const RECIPES = {
     goryoku: {
       name: "剛力の宝薬G4",
@@ -68,7 +73,7 @@
     },
     shinryoku: {
       name: "心力の宝薬G4",
-      marketId: null, // なし
+      marketId: null,
       materials: [
         { id: 49228, name: "イヨラエキス" },
         { id: 44051, name: "大聖水" },
@@ -79,70 +84,61 @@
   };
 
   async function fetchAvgPrice(dc, id) {
-    const url = `https://universalis.app/api/v2/${dc}/${id}`;
-    const res = await fetch(url);
+    const res = await fetch(`https://universalis.app/api/v2/${dc}/${id}`);
     if (!res.ok) return null;
     const data = await res.json();
-
     const listings = data.listings || [];
-    if (listings.length === 0) return null;
+    if (!listings.length) return null;
 
     const hq = listings.filter(i => i.hq);
     const nq = listings.filter(i => !i.hq);
-    const target = hq.length > 0 ? hq : nq;
+    const target = hq.length ? hq : nq;
 
     const prices = target
-      .sort((a, b) => a.pricePerUnit - b.pricePerUnit)
-      .slice(0, 10)
+      .sort((a,b) => a.pricePerUnit - b.pricePerUnit)
+      .slice(0,10)
       .map(i => i.pricePerUnit);
 
-    if (prices.length === 0) return null;
-    const avg = Math.round(prices.reduce((a,b) => a+b, 0) / prices.length);
-    return avg;
+    return Math.round(prices.reduce((a,b) => a+b,0) / prices.length);
   }
 
   async function fetchAll() {
-    const recipeKey = document.getElementById("recipe-select").value;
-    const recipe = RECIPES[recipeKey];
+    const recipe = RECIPES[document.getElementById("recipe-select").value];
     const dc = document.getElementById("dc-select").value;
-    const resultDiv = document.getElementById("result");
+    const result = document.getElementById("result");
 
-    resultDiv.innerHTML = `
+    result.innerHTML = `
       <h2>${recipe.name}</h2>
-      <div class="section label">DC: ${dc}</div>
+      <div class="note">※ 1回の製作で <strong>${OUTPUT_COUNT}個</strong> 完成します</div>
+      <div class="section strong">DC：${dc}</div>
+      <div class="section strong">素材価格（1回分）</div>
+      <div class="materials"></div>
     `;
 
-    // 素材価格一覧
-    let totalCost = 0;
-    resultDiv.innerHTML += `<div class="section label">素材価格</div>`;
-    resultDiv.innerHTML += `<div class="materials"></div>`;
-    const matDiv = resultDiv.querySelector(".materials");
+    let cost = 0;
+    const matDiv = result.querySelector(".materials");
 
     for (const item of recipe.materials) {
       const price = await fetchAvgPrice(dc, item.id);
       if (price !== null) {
-        totalCost += price;
+        cost += price;
         matDiv.innerHTML += `・${item.name}　${price.toLocaleString()} ギル<br>`;
       } else {
         matDiv.innerHTML += `・${item.name}　データなし<br>`;
       }
     }
 
-    resultDiv.innerHTML += `<div class="section total">原価合計：${totalCost.toLocaleString()} ギル</div>`;
+    const perItemCost = Math.round(cost / OUTPUT_COUNT);
 
-    // 完成品価格（剛力のみ対応）
+    result.innerHTML += `
+      <div class="section strong">製作原価（${OUTPUT_COUNT}個分）：${cost.toLocaleString()} ギル</div>
+      <div class="section">1個あたり原価：${perItemCost.toLocaleString()} ギル</div>
+    `;
+
     if (recipe.marketId) {
-      const sellPrice = await fetchAvgPrice(dc, recipe.marketId);
-      if (sellPrice !== null) {
-        resultDiv.innerHTML += `<div class="section label">販売平均価格：${sellPrice.toLocaleString()} ギル</div>`;
-        const profit = sellPrice - totalCost;
-        resultDiv.innerHTML += `<div class="section label">利益：${profit.toLocaleString()} ギル</div>`;
-      } else {
-        resultDiv.innerHTML += `<div class="section label">販売価格データなし</div>`;
-      }
-    }
-  }
-</script>
-
-</body>
-</html>
+      const sell = await fetchAvgPrice(dc, recipe.marketId);
+      if (sell !== null) {
+        const revenue = sell * OUTPUT_COUNT;
+        const profit = revenue - cost;
+        result.innerHTML += `
+          <d
