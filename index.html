@@ -7,7 +7,7 @@
     body {
       font-family: sans-serif;
       padding: 20px;
-      max-width: 650px;
+      max-width: 700px;
     }
     select, button {
       padding: 8px;
@@ -21,7 +21,7 @@
 </head>
 <body>
 
-  <h1>FF14 アイテム価格チェック</h1>
+  <h1>FF14 アイテム価格チェック（HQ優先）</h1>
 
   <!-- DC選択 -->
   <label>
@@ -49,10 +49,12 @@
   <ul id="list"></ul>
 
   <script>
-    // ===== アイテム一覧（表示名は日本語）=====
+    // ===== アイテム一覧（表示名） =====
     const ITEMS = [
       { id: 49228, name: "イヨラエキス" },
-      { id: 44051, name: "大聖水" }
+      { id: 44051, name: "大聖水" },
+      { id: 44039, name: "ウィンドパセリ" },
+      { id: 46246, name: "紫電の霊砂" }
     ];
 
     function initItems() {
@@ -86,15 +88,15 @@
           return;
         }
 
-        // HQ / NQ 分離
+        // HQ と NQ に分ける
         const hqListings = data.listings.filter(i => i.hq === true);
         const nqListings = data.listings.filter(i => i.hq === false);
 
-        // HQ優先
+        // HQ優先、なければNQ
         const targetListings = hqListings.length > 0 ? hqListings : nqListings;
         const qualityLabel = hqListings.length > 0 ? "HQ" : "NQ";
 
-        // 安い順10件
+        // 安い順に10件
         const sorted = targetListings
           .sort((a, b) => a.pricePerUnit - b.pricePerUnit)
           .slice(0, 10);
@@ -104,7 +106,7 @@
 
         // 表示
         document.getElementById("title").textContent =
-          `${itemName}（${dc} / ${qualityLabel}）`;
+          `${itemName}（${dc} DC / ${qualityLabel}）`;
 
         document.getElementById("list").innerHTML =
           sorted.map(i =>
@@ -112,7 +114,7 @@
           ).join("");
 
         document.getElementById("average").textContent =
-          `安値${sorted.length}件の平均価格：${average.toLocaleString()} ギル`;
+          `${qualityLabel} 安値${sorted.length}件の平均価格：${average.toLocaleString()} ギル`;
 
       } catch (e) {
         console.error(e);
