@@ -44,14 +44,15 @@
 
   <button onclick="fetchPrice()">価格取得</button>
 
-  <h2 id="average"></h2>
+  <h2 id="title"></h2>
+  <h3 id="average"></h3>
   <ul id="list"></ul>
 
   <script>
-    // ===== アイテム一覧 =====
+    // ===== アイテム一覧（表示名は日本語）=====
     const ITEMS = [
       { id: 49228, name: "イヨラエキス" },
-      { id: 44051, name: "（ID:44051 のアイテム）" }
+      { id: 44051, name: "大聖水" }
     ];
 
     function initItems() {
@@ -66,7 +67,9 @@
 
     async function fetchPrice() {
       try {
-        const itemId = document.getElementById("item-select").value;
+        const selectEl = document.getElementById("item-select");
+        const itemId = selectEl.value;
+        const itemName = selectEl.options[selectEl.selectedIndex].text;
         const dc = document.getElementById("dc-select").value;
 
         const url = `https://universalis.app/api/v2/${dc}/${itemId}`;
@@ -83,39 +86,33 @@
           return;
         }
 
-        // HQ / NQ に分ける
+        // HQ / NQ 分離
         const hqListings = data.listings.filter(i => i.hq === true);
         const nqListings = data.listings.filter(i => i.hq === false);
 
-        // HQがあればHQ、なければNQ
+        // HQ優先
         const targetListings = hqListings.length > 0 ? hqListings : nqListings;
         const qualityLabel = hqListings.length > 0 ? "HQ" : "NQ";
 
-        if (targetListings.length === 0) {
-          alert("出品データがありません");
-          return;
-        }
-
-        // 安い順に10件
+        // 安い順10件
         const sorted = targetListings
           .sort((a, b) => a.pricePerUnit - b.pricePerUnit)
           .slice(0, 10);
 
-        // 平均
         const total = sorted.reduce((sum, i) => sum + i.pricePerUnit, 0);
         const average = Math.round(total / sorted.length);
 
         // 表示
+        document.getElementById("title").textContent =
+          `${itemName}（${dc} / ${qualityLabel}）`;
+
         document.getElementById("list").innerHTML =
           sorted.map(i =>
-            `<li>
-              ${i.pricePerUnit.toLocaleString()} ギル
-              （${i.worldName} / ${qualityLabel}）
-            </li>`
+            `<li>${i.pricePerUnit.toLocaleString()} ギル（${i.worldName}）</li>`
           ).join("");
 
         document.getElementById("average").textContent =
-          `${qualityLabel}安値${sorted.length}件の平均価格：${average.toLocaleString()} ギル`;
+          `安値${sorted.length}件の平均価格：${average.toLocaleString()} ギル`;
 
       } catch (e) {
         console.error(e);
