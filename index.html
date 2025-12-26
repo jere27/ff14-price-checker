@@ -1,57 +1,119 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <title>FF14 価格チェッカー</title>
+  <meta charset="UTF-8" />
+  <title>FF14 アイテム価格チェッカー</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      max-width: 600px;
+    }
+    h1 {
+      margin-bottom: 10px;
+    }
+    select, button {
+      padding: 8px;
+      font-size: 14px;
+      margin-right: 5px;
+    }
+    ul {
+      margin-top: 10px;
+    }
+  </style>
 </head>
 <body>
-  <h1>イヨラエキス 価格チェック</h1>
+
+  <h1>FF14 アイテム価格チェック</h1>
+
+  <!-- DC選択 -->
+  <label>
+    DC：
+    <select id="dc-select">
+      <option value="Mana">Mana</option>
+      <option value="Gaia">Gaia</option>
+      <option value="Elemental">Elemental</option>
+      <option value="Meteor">Meteor</option>
+    </select>
+  </label>
+
+  <br><br>
+
+  <!-- アイテム選択 -->
+  <label>
+    アイテム：
+    <select id="item-select"></select>
+  </label>
+
   <button onclick="fetchPrice()">価格取得</button>
+
   <h2 id="average"></h2>
   <ul id="list"></ul>
 
-<script>
-  const ITEM_ID = 49228;
-  const DC_NAME = "Mana"; // Gaia / Mana / Elemental / Meteor
+  <script>
+    // ===== アイテム一覧 =====
+    const ITEMS = [
+      { id: 49228, name: "イヨラエキス" },
+      { id: 44051, name: "（ID:44051 のアイテム）" }
+    ];
 
-  async function fetchPrice() {
-    try {
-      const url = `https://universalis.app/api/v2/${DC_NAME}/${ITEM_ID}`;
-      const res = await fetch(url);
-
-      if (!res.ok) {
-        throw new Error("API取得失敗");
-      }
-
-      const data = await res.json();
-
-      if (!data.listings || data.listings.length === 0) {
-        alert("出品データがありません");
-        return;
-      }
-
-      const sorted = data.listings
-        .sort((a, b) => a.pricePerUnit - b.pricePerUnit)
-        .slice(0, 10);
-
-      const total = sorted.reduce((sum, i) => sum + i.pricePerUnit, 0);
-      const average = Math.round(total / sorted.length);
-
-      document.getElementById("list").innerHTML =
-        sorted.map(i =>
-          `<li>${i.pricePerUnit.toLocaleString()} ギル（${i.worldName}）</li>`
-        ).join("");
-
-      document.getElementById("average").textContent =
-        `安値10件の平均価格（${DC_NAME}）：${average.toLocaleString()} ギル`;
-
-    } catch (e) {
-      console.error(e);
-      alert("エラーが発生しました。Consoleを確認してください");
+    // 初期化：アイテムプルダウンを作る
+    function initItems() {
+      const select = document.getElementById("item-select");
+      ITEMS.forEach(item => {
+        const option = document.createElement("option");
+        option.value = item.id;
+        option.textContent = item.name;
+        select.appendChild(option);
+      });
     }
-  }
-</script>
 
+    async function fetchPrice() {
+      try {
+        const itemId = document.getElementById("item-select").value;
+        const dc = document.getElementById("dc-select").value;
+
+        const url = `https://universalis.app/api/v2/${dc}/${itemId}`;
+        const res = await fetch(url);
+
+        if (!res.ok) {
+          throw new Error("API取得失敗");
+        }
+
+        const data = await res.json();
+
+        if (!data.listings || data.listings.length === 0) {
+          alert("出品データがありません");
+          return;
+        }
+
+        // 安い順に10件
+        const sorted = data.listings
+          .sort((a, b) => a.pricePerUnit - b.pricePerUnit)
+          .slice(0, 10);
+
+        // 平均値
+        const total = sorted.reduce((sum, i) => sum + i.pricePerUnit, 0);
+        const average = Math.round(total / sorted.length);
+
+        // 表示
+        document.getElementById("list").innerHTML =
+          sorted.map(i =>
+            `<li>${i.pricePerUnit.toLocaleString()} ギル（${i.worldName}）</li>`
+          ).join("");
+
+        document.getElementById("average").textContent =
+          `安値10件の平均価格：${average.toLocaleString()} ギル`;
+
+      } catch (e) {
+        console.error(e);
+        alert("エラーが発生しました。Consoleを確認してください");
+      }
+    }
+
+    // ページ読み込み時に初期化
+    window.onload = initItems;
+  </script>
 
 </body>
 </html>
