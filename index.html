@@ -2,45 +2,36 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>FF14 宝薬G4 原価・利益チェッカー</title>
+<title>FF14 宝薬G4 原価チェック</title>
 <style>
-  body { font-family: sans-serif; padding: 20px; max-width: 750px; }
-  select, button { padding: 8px; font-size: 14px; margin-right: 5px; }
-  .materials { margin-left: 20px; margin-top: 10px; line-height: 1.9; }
-  .section { margin-top: 15px; }
-  .label { font-weight: bold; }
-  .note { color: #555; font-size: 13px; }
+body { font-family: sans-serif; padding: 20px; max-width: 700px; }
+select, button { padding: 8px; margin-right: 5px; }
+.materials { margin-left: 20px; line-height: 1.8; }
+.note { color: #555; font-size: 13px; }
+.price { font-weight: bold; }
 </style>
 </head>
 <body>
 
-<h1>FF14 宝薬G4 原価・利益チェッカー</h1>
+<h1>FF14 宝薬G4 原価チェッカー</h1>
 
-<label>
-  宝薬：
-  <select id="recipe-select">
-    <option value="goryoku">剛力の宝薬G4</option>
-    <option value="shinryoku">心力の宝薬G4</option>
-  </select>
-</label>
+<select id="recipe">
+  <option value="goryoku">剛力の宝薬G4</option>
+  <option value="shinryoku">心力の宝薬G4</option>
+</select>
 
-<label>
-  DC：
-  <select id="dc-select">
-    <option value="Mana">Mana</option>
-    <option value="Gaia">Gaia</option>
-    <option value="Elemental">Elemental</option>
-    <option value="Meteor">Meteor</option>
-  </select>
-</label>
+<select id="dc">
+  <option value="Mana">Mana</option>
+  <option value="Gaia">Gaia</option>
+  <option value="Elemental">Elemental</option>
+  <option value="Meteor">Meteor</option>
+</select>
 
 <button onclick="fetchAll()">価格取得</button>
 
 <div id="result"></div>
 
 <script>
-const OUTPUT_COUNT = 3;
-
 const RECIPES = {
   goryoku: {
     name: "剛力の宝薬G4",
@@ -64,105 +55,4 @@ const RECIPES = {
   }
 };
 
-async function fetchAvgPrice(dc, id) {
-  const res = await fetch(`https://universalis.app/api/v2/${dc}/${id}`);
-  if (!res.ok) return null;
-  const data = await res.json();
-  const listings = data.listings || [];
-  if (!listings.length) return null;
-
-  const hq = listings.filter(i => i.hq);
-  const use = hq.length ? hq : listings;
-
-  const prices = use
-    .sort((a, b) => a.pricePerUnit - b.pricePerUnit)
-    .slice(0, 10)
-    .map(i => i.pricePerUnit);
-
-  return Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
-}
-
-async function fetchAll() {
-  const recipe = RECIPES[document.getElementById("recipe-select").value];
-  const dc = document.getElementById("dc-select").value;
-  const resultDiv = document.getElementById("result");
-
-  resultDiv.innerHTML = `
-    <h2>${recipe.name}</h2>
-    <div class="note">※ 1回の製作で ${OUTPUT_COUNT} 個完成します</div>
-    <div class="section label">DC: ${dc}</div>
-  `;
-
-  // --- 完成品価格 (表示) ---
-  if (recipe.marketId) {
-    const sellAvg = await fetchAvgPrice(dc, recipe.marketId);
-    if (sellAvg !== null) {
-      resultDiv.innerHTML += `
-        <div class="section">
-          <span class="label">完成品販売相場（1個）：</span>
-          ${sellAvg.toLocaleString()} ギル
-        </div>
-        <div class="section">
-          <span class="label">完成品販売相場（${OUTPUT_COUNT}個）：</span>
-          ${(sellAvg * OUTPUT_COUNT).toLocaleString()} ギル
-        </div>
-      `;
-    } else {
-      resultDiv.innerHTML += `
-        <div class="section">完成品販売価格データなし</div>
-      `;
-    }
-  }
-
-  // --- 素材一覧 ---
-  resultDiv.innerHTML += `
-    <div class="section label">素材価格（1回分）</div>
-    <div class="materials"></div>
-  `;
-
-  const matDiv = resultDiv.querySelector(".materials");
-  let totalCost = 0;
-
-  for (const m of recipe.materials) {
-    const price = await fetchAvgPrice(dc, m.id);
-    if (price !== null) {
-      totalCost += price;
-      matDiv.innerHTML += `・${m.name}　${price.toLocaleString()} ギル<br>`;
-    } else {
-      matDiv.innerHTML += `・${m.name}　データなし<br>`;
-    }
-  }
-
-  const perUnitCost = Math.round(totalCost / OUTPUT_COUNT);
-
-  resultDiv.innerHTML += `
-    <div class="section">
-      <span class="label">原価合計（${OUTPUT_COUNT}個分）：</span>
-      ${totalCost.toLocaleString()} ギル
-    </div>
-    <div class="section">
-      <span class="label">1個あたり原価：</span>
-      ${perUnitCost.toLocaleString()} ギル
-    </div>
-  `;
-
-  // --- 利益 ---
-  if (recipe.marketId) {
-    const sellAvg = await fetchAvgPrice(dc, recipe.marketId);
-    if (sellAvg !== null) {
-      const revenue = sellAvg * OUTPUT_COUNT;
-      const profit = revenue - totalCost;
-      resultDiv.innerHTML += `
-        <div class="section">
-          <span class="label">利益（${OUTPUT_COUNT}個分）：</span>
-          ${profit.toLocaleString()} ギル
-        </div>
-      `;
-    }
-  }
-}
-
-</script>
-
-</body>
-</html>
+async function fetchAvg(
