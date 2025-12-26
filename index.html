@@ -2,128 +2,89 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>FF14 アイテム価格チェッカー（HQ優先）</title>
+  <title>剛力の宝薬G4 素材価格チェッカー</title>
   <style>
     body {
       font-family: sans-serif;
       padding: 20px;
-      max-width: 700px;
+      max-width: 600px;
     }
-    select, button {
+    button, select {
       padding: 8px;
       font-size: 14px;
-      margin-right: 5px;
     }
-    ul {
-      margin-top: 10px;
+    .item {
+      margin-left: 20px;
+      line-height: 1.8;
     }
   </style>
 </head>
 <body>
 
-  <h1>FF14 アイテム価格チェック（HQ優先）</h1>
+<h1>剛力の宝薬G4</h1>
 
-  <!-- DC選択 -->
-  <label>
-    DC：
-    <select id="dc-select">
-      <option value="Mana">Mana</option>
-      <option value="Gaia">Gaia</option>
-      <option value="Elemental">Elemental</option>
-      <option value="Meteor">Meteor</option>
-    </select>
-  </label>
+<label>
+  DC：
+  <select id="dc-select">
+    <option value="Mana">Mana</option>
+    <option value="Gaia">Gaia</option>
+    <option value="Elemental">Elemental</option>
+    <option value="Meteor">Meteor</option>
+  </select>
+</label>
 
-  <br><br>
+<button onclick="fetchAll()">価格取得</button>
 
-  <!-- アイテム選択 -->
-  <label>
-    アイテム：
-    <select id="item-select"></select>
-  </label>
+<div id="result"></div>
 
-  <button onclick="fetchPrice()">価格取得</button>
+<script>
+  // ===== 剛力の宝薬G4 素材 =====
+  const MATERIALS = [
+    { id: 49228, name: "イヨラエキス" },
+    { id: 44051, name: "大聖水" },
+    { id: 44039, name: "ウィンドパセリ" },
+    { id: 46246, name: "紫電の霊砂" }
+  ];
 
-  <h2 id="title"></h2>
-  <h3 id="average"></h3>
-  <ul id="list"></ul>
+  async function fetchPrice(dc, item) {
+    const url = `https://universalis.app/api/v2/${dc}/${item.id}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("API取得失敗");
 
-  <script>
-    // ===== アイテム一覧（表示名） =====
-    const ITEMS = [
-      { id: 49228, name: "イヨラエキス" },
-      { id: 44051, name: "大聖水" },
-      { id: 44039, name: "ウィンドパセリ" },
-      { id: 46246, name: "紫電の霊砂" }
-    ];
+    const data = await res.json();
+    const listings = data.listings || [];
 
-    function initItems() {
-      const select = document.getElementById("item-select");
-      ITEMS.forEach(item => {
-        const option = document.createElement("option");
-        option.value = item.id;
-        option.textContent = item.name;
-        select.appendChild(option);
-      });
+    if (listings.length === 0) return "データなし";
+
+    const hq = listings.filter(i => i.hq);
+    const nq = listings.filter(i => !i.hq);
+    const target = hq.length > 0 ? hq : nq;
+
+    const prices = target
+      .sort((a, b) => a.pricePerUnit - b.pricePerUnit)
+      .slice(0, 10)
+      .map(i => i.pricePerUnit);
+
+    const avg = Math.round(
+      prices.reduce((a, b) => a + b, 0) / prices.length
+    );
+
+    return avg.toLocaleString() + " ギル";
+  }
+
+  async function fetchAll() {
+    const dc = document.getElementById("dc-select").value;
+    const resultDiv = document.getElementById("result");
+
+    resultDiv.innerHTML = `<h2>${dc} DC</h2>`;
+
+    for (const item of MATERIALS) {
+      const price = await fetchPrice(dc, item);
+      resultDiv.innerHTML +=
+        `<div class="item">・${item.name}　${price}</div>`;
     }
-
-    async function fetchPrice() {
-      try {
-        const selectEl = document.getElementById("item-select");
-        const itemId = selectEl.value;
-        const itemName = selectEl.options[selectEl.selectedIndex].text;
-        const dc = document.getElementById("dc-select").value;
-
-        const url = `https://universalis.app/api/v2/${dc}/${itemId}`;
-        const res = await fetch(url);
-
-        if (!res.ok) {
-          throw new Error("API取得失敗");
-        }
-
-        const data = await res.json();
-
-        if (!data.listings || data.listings.length === 0) {
-          alert("出品データがありません");
-          return;
-        }
-
-        // HQ と NQ に分ける
-        const hqListings = data.listings.filter(i => i.hq === true);
-        const nqListings = data.listings.filter(i => i.hq === false);
-
-        // HQ優先、なければNQ
-        const targetListings = hqListings.length > 0 ? hqListings : nqListings;
-        const qualityLabel = hqListings.length > 0 ? "HQ" : "NQ";
-
-        // 安い順に10件
-        const sorted = targetListings
-          .sort((a, b) => a.pricePerUnit - b.pricePerUnit)
-          .slice(0, 10);
-
-        const total = sorted.reduce((sum, i) => sum + i.pricePerUnit, 0);
-        const average = Math.round(total / sorted.length);
-
-        // 表示
-        document.getElementById("title").textContent =
-          `${itemName}（${dc} DC / ${qualityLabel}）`;
-
-        document.getElementById("list").innerHTML =
-          sorted.map(i =>
-            `<li>${i.pricePerUnit.toLocaleString()} ギル（${i.worldName}）</li>`
-          ).join("");
-
-        document.getElementById("average").textContent =
-          `${qualityLabel} 安値${sorted.length}件の平均価格：${average.toLocaleString()} ギル`;
-
-      } catch (e) {
-        console.error(e);
-        alert("エラーが発生しました。Consoleを確認してください");
-      }
-    }
-
-    window.onload = initItems;
-  </script>
+  }
+</script>
 
 </body>
 </html>
