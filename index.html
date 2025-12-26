@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>FF14 HQアイテム価格チェッカー</title>
+  <title>FF14 アイテム価格チェッカー（HQ優先）</title>
   <style>
     body {
       font-family: sans-serif;
@@ -21,7 +21,7 @@
 </head>
 <body>
 
-  <h1>FF14 HQアイテム価格チェック</h1>
+  <h1>FF14 アイテム価格チェック</h1>
 
   <!-- DC選択 -->
   <label>
@@ -42,7 +42,7 @@
     <select id="item-select"></select>
   </label>
 
-  <button onclick="fetchPrice()">価格取得（HQのみ）</button>
+  <button onclick="fetchPrice()">価格取得</button>
 
   <h2 id="average"></h2>
   <ul id="list"></ul>
@@ -54,7 +54,6 @@
       { id: 44051, name: "（ID:44051 のアイテム）" }
     ];
 
-    // 初期化
     function initItems() {
       const select = document.getElementById("item-select");
       ITEMS.forEach(item => {
@@ -84,20 +83,25 @@
           return;
         }
 
-        // 🔽 HQのみ抽出
-        const hqOnly = data.listings.filter(item => item.hq === true);
+        // HQ / NQ に分ける
+        const hqListings = data.listings.filter(i => i.hq === true);
+        const nqListings = data.listings.filter(i => i.hq === false);
 
-        if (hqOnly.length === 0) {
-          alert("HQ出品がありません");
+        // HQがあればHQ、なければNQ
+        const targetListings = hqListings.length > 0 ? hqListings : nqListings;
+        const qualityLabel = hqListings.length > 0 ? "HQ" : "NQ";
+
+        if (targetListings.length === 0) {
+          alert("出品データがありません");
           return;
         }
 
         // 安い順に10件
-        const sorted = hqOnly
+        const sorted = targetListings
           .sort((a, b) => a.pricePerUnit - b.pricePerUnit)
           .slice(0, 10);
 
-        // 平均値
+        // 平均
         const total = sorted.reduce((sum, i) => sum + i.pricePerUnit, 0);
         const average = Math.round(total / sorted.length);
 
@@ -106,12 +110,12 @@
           sorted.map(i =>
             `<li>
               ${i.pricePerUnit.toLocaleString()} ギル
-              （${i.worldName} / HQ）
+              （${i.worldName} / ${qualityLabel}）
             </li>`
           ).join("");
 
         document.getElementById("average").textContent =
-          `HQ安値${sorted.length}件の平均価格：${average.toLocaleString()} ギル`;
+          `${qualityLabel}安値${sorted.length}件の平均価格：${average.toLocaleString()} ギル`;
 
       } catch (e) {
         console.error(e);
