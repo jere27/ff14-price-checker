@@ -11,6 +11,7 @@ select, button { padding: 8px; margin-right: 5px; }
 .price { font-weight: bold; }
 </style>
 </head>
+
 <body>
 
 <h1>FF14 宝薬G4 原価チェッカー</h1>
@@ -27,7 +28,7 @@ select, button { padding: 8px; margin-right: 5px; }
   <option value="Meteor">Meteor</option>
 </select>
 
-<button onclick="fetchAll()">価格取得</button>
+<button id="fetchBtn">価格取得</button>
 
 <div id="result"></div>
 
@@ -55,4 +56,63 @@ const RECIPES = {
   }
 };
 
-async function fetchAvg(
+async function fetchAvg(dc, id) {
+  const res = await fetch(`https://universalis.app/api/v2/${dc}/${id}`);
+  if (!res.ok) return null;
+  const data = await res.json();
+  const list = data.listings || [];
+  if (!list.length) return null;
+
+  const hq = list.filter(x => x.hq);
+  const use = hq.length ? hq : list;
+
+  const prices = use
+    .sort((a,b) => a.pricePerUnit - b.pricePerUnit)
+    .slice(0,10)
+    .map(x => x.pricePerUnit);
+
+  return Math.round(prices.reduce((a,b)=>a+b,0)/prices.length);
+}
+
+async function fetchAll() {
+  const recipe = RECIPES[document.getElementById("recipe").value];
+  const dc = document.getElementById("dc").value;
+  const result = document.getElementById("result");
+
+  result.innerHTML = `<h2>${recipe.name}</h2>`;
+
+  if (recipe.marketId) {
+    const sell = await fetchAvg(dc, recipe.marketId);
+    if (sell !== null) {
+      result.innerHTML += `<div class="price">販売相場（1個）：${sell.toLocaleString()} ギル</div>`;
+    }
+  }
+
+  result.innerHTML += `
+    <div class="note">※ 1回の製作で3個完成します</div>
+    <h3>素材（1回分）</h3>
+    <div class="materials"></div>
+  `;
+
+  let cost = 0;
+  const mat = result.querySelector(".materials");
+
+  for (const item of recipe.materials) {
+    const p = await fetchAvg(dc, item.id);
+    if (p !== null) {
+      cost += p;
+      mat.innerHTML += `・${item.name}　${p.toLocaleString()} ギル<br>`;
+    } else {
+      mat.innerHTML += `・${item.name}　取得失敗<br>`;
+    }
+  }
+
+  result.innerHTML += `<h3>原価（1回分）：${cost.toLocaleString()} ギル</h3>`;
+}
+
+// 🔴 ここが重要：ボタンとJSを接続
+document.getElementById("fetchBtn").addEventListener("click", fetchAll);
+</script>
+
+</body>
+</html>
