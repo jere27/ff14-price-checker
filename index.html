@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>FF14 価格チェッカー</title>
+</head>
+<body>
+  <h1>イヨラエキス 価格チェック</h1>
+  <button onclick="fetchPrice()">価格取得</button>
+  <h2 id="average"></h2>
+  <ul id="list"></ul>
+
+  <script>
+    const ITEM_ID = 49228;
+
+    async function fetchPrice() {
+      const res = await fetch(`https://universalis.app/api/v2/markets/${ITEM_ID}`);
+      const data = await res.json();
+
+      const sorted = data.listings
+        .sort((a, b) => a.pricePerUnit - b.pricePerUnit)
+        .slice(0, 10);
+
+      const avg = Math.round(
+        sorted.reduce((s, i) => s + i.pricePerUnit, 0) / sorted.length
+      );
+
+      document.getElementById("list").innerHTML =
+        sorted.map(i => `<li>${i.pricePerUnit} ギル</li>`).join("");
+
+      document.getElementById("average").textContent =
+        `安値10件の平均：${avg} ギル`;
+    }
+  </script>
+</body>
+</html>
