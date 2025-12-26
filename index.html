@@ -2,12 +2,12 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>FF14 宝薬G4 原価計算</title>
+  <title>FF14 宝薬G4 原価・利益チェッカー</title>
   <style>
     body {
       font-family: sans-serif;
       padding: 20px;
-      max-width: 650px;
+      max-width: 700px;
     }
     select, button {
       padding: 8px;
@@ -19,21 +19,17 @@
       margin-top: 10px;
       line-height: 1.9;
     }
-    .total {
+    .section {
       margin-top: 15px;
-      font-weight: bold;
-      font-size: 16px;
     }
-    .note {
-      color: #555;
-      font-size: 13px;
-      margin-top: 5px;
+    .label {
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
 
-<h1>原価チェッカー</h1>
+<h1>FF14 宝薬G4 原価・利益チェッカー</h1>
 
 <label>
   宝薬：
@@ -58,10 +54,11 @@
 <div id="result"></div>
 
 <script>
-  // ===== レシピ定義 =====
+  // ===== 各レシピ =====
   const RECIPES = {
     goryoku: {
       name: "剛力の宝薬G4",
+      marketId: 49234,
       materials: [
         { id: 49228, name: "イヨラエキス" },
         { id: 44051, name: "大聖水" },
@@ -71,6 +68,7 @@
     },
     shinryoku: {
       name: "心力の宝薬G4",
+      marketId: null, // なし
       materials: [
         { id: 49228, name: "イヨラエキス" },
         { id: 44051, name: "大聖水" },
@@ -80,12 +78,12 @@
     }
   };
 
-  async function fetchPrice(dc, item) {
-    const url = `https://universalis.app/api/v2/${dc}/${item.id}`;
+  async function fetchAvgPrice(dc, id) {
+    const url = `https://universalis.app/api/v2/${dc}/${id}`;
     const res = await fetch(url);
-    if (!res.ok) throw new Error("API取得失敗");
-
+    if (!res.ok) return null;
     const data = await res.json();
+
     const listings = data.listings || [];
     if (listings.length === 0) return null;
 
@@ -98,9 +96,9 @@
       .slice(0, 10)
       .map(i => i.pricePerUnit);
 
-    return Math.round(
-      prices.reduce((a, b) => a + b, 0) / prices.length
-    );
+    if (prices.length === 0) return null;
+    const avg = Math.round(prices.reduce((a,b) => a+b, 0) / prices.length);
+    return avg;
   }
 
   async function fetchAll() {
@@ -111,29 +109,38 @@
 
     resultDiv.innerHTML = `
       <h2>${recipe.name}</h2>
-      <div class="note">※ 作成に必要な素材の平均価格</div>
-      <h3>${dc} DC</h3>
-      <div class="materials"></div>
+      <div class="section label">DC: ${dc}</div>
     `;
 
-    const materialsDiv = resultDiv.querySelector(".materials");
+    // 素材価格一覧
     let totalCost = 0;
+    resultDiv.innerHTML += `<div class="section label">素材価格</div>`;
+    resultDiv.innerHTML += `<div class="materials"></div>`;
+    const matDiv = resultDiv.querySelector(".materials");
 
     for (const item of recipe.materials) {
-      const price = await fetchPrice(dc, item);
-
+      const price = await fetchAvgPrice(dc, item.id);
       if (price !== null) {
         totalCost += price;
-        materialsDiv.innerHTML +=
-          `・${item.name}　${price.toLocaleString()} ギル<br>`;
+        matDiv.innerHTML += `・${item.name}　${price.toLocaleString()} ギル<br>`;
       } else {
-        materialsDiv.innerHTML +=
-          `・${item.name}　データなし<br>`;
+        matDiv.innerHTML += `・${item.name}　データなし<br>`;
       }
     }
 
-    resultDiv.innerHTML +=
-      `<div class="total">原価合計：${totalCost.toLocaleString()} ギル</div>`;
+    resultDiv.innerHTML += `<div class="section total">原価合計：${totalCost.toLocaleString()} ギル</div>`;
+
+    // 完成品価格（剛力のみ対応）
+    if (recipe.marketId) {
+      const sellPrice = await fetchAvgPrice(dc, recipe.marketId);
+      if (sellPrice !== null) {
+        resultDiv.innerHTML += `<div class="section label">販売平均価格：${sellPrice.toLocaleString()} ギル</div>`;
+        const profit = sellPrice - totalCost;
+        resultDiv.innerHTML += `<div class="section label">利益：${profit.toLocaleString()} ギル</div>`;
+      } else {
+        resultDiv.innerHTML += `<div class="section label">販売価格データなし</div>`;
+      }
+    }
   }
 </script>
 
