@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>剛力の宝薬G4 素材価格チェッカー</title>
+  <title>剛力の宝薬G4 原価計算</title>
   <style>
     body {
       font-family: sans-serif;
@@ -16,6 +16,11 @@
     .item {
       margin-left: 20px;
       line-height: 1.8;
+    }
+    .total {
+      margin-top: 15px;
+      font-weight: bold;
+      font-size: 16px;
     }
   </style>
 </head>
@@ -53,8 +58,7 @@
 
     const data = await res.json();
     const listings = data.listings || [];
-
-    if (listings.length === 0) return "データなし";
+    if (listings.length === 0) return null;
 
     const hq = listings.filter(i => i.hq);
     const nq = listings.filter(i => !i.hq);
@@ -65,11 +69,9 @@
       .slice(0, 10)
       .map(i => i.pricePerUnit);
 
-    const avg = Math.round(
+    return Math.round(
       prices.reduce((a, b) => a + b, 0) / prices.length
     );
-
-    return avg.toLocaleString() + " ギル";
   }
 
   async function fetchAll() {
@@ -78,11 +80,23 @@
 
     resultDiv.innerHTML = `<h2>${dc} DC</h2>`;
 
+    let totalCost = 0;
+
     for (const item of MATERIALS) {
       const price = await fetchPrice(dc, item);
-      resultDiv.innerHTML +=
-        `<div class="item">・${item.name}　${price}</div>`;
+
+      if (price !== null) {
+        totalCost += price;
+        resultDiv.innerHTML +=
+          `<div class="item">・${item.name}　${price.toLocaleString()} ギル</div>`;
+      } else {
+        resultDiv.innerHTML +=
+          `<div class="item">・${item.name}　データなし</div>`;
+      }
     }
+
+    resultDiv.innerHTML +=
+      `<div class="total">原価合計：${totalCost.toLocaleString()} ギル</div>`;
   }
 </script>
 
