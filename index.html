@@ -12,11 +12,11 @@
 
 <script>
   const ITEM_ID = 49228;
-  const DC_NAME = "Mana"; // Gaia / Mana / Elemental / Meteor など
+  const DC_NAME = "Mana"; // Gaia / Mana / Elemental / Meteor
 
   async function fetchPrice() {
     try {
-      const url = `https://universalis.app/api/v2/markets/${ITEM_ID}?dc=${DC_NAME}`;
+      const url = `https://universalis.app/api/v2/${DC_NAME}/${ITEM_ID}`;
       const res = await fetch(url);
 
       if (!res.ok) {
@@ -51,6 +51,7 @@
     }
   }
 </script>
+
 
 </body>
 </html>
