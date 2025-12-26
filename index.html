@@ -2,16 +2,17 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>剛力の宝薬G4 素材原価</title>
+  <title>FF14 宝薬G4 原価計算</title>
   <style>
     body {
       font-family: sans-serif;
       padding: 20px;
-      max-width: 600px;
+      max-width: 650px;
     }
-    button, select {
+    select, button {
       padding: 8px;
       font-size: 14px;
+      margin-right: 5px;
     }
     .materials {
       margin-left: 20px;
@@ -32,8 +33,15 @@
 </head>
 <body>
 
-<h1>剛力の宝薬G4</h1>
-<div class="note">※ 以下は「剛力の宝薬G4」を作成するための素材価格です</div>
+<h1>FF14 宝薬G4 原価チェッカー</h1>
+
+<label>
+  宝薬：
+  <select id="recipe-select">
+    <option value="goryoku">剛力の宝薬G4</option>
+    <option value="shinryoku">心力の宝薬G4</option>
+  </select>
+</label>
 
 <label>
   DC：
@@ -50,13 +58,27 @@
 <div id="result"></div>
 
 <script>
-  // 剛力の宝薬G4 の素材
-  const MATERIALS = [
-    { id: 49228, name: "イヨラエキス" },
-    { id: 44051, name: "大聖水" },
-    { id: 44039, name: "ウィンドパセリ" },
-    { id: 46246, name: "紫電の霊砂" }
-  ];
+  // ===== レシピ定義 =====
+  const RECIPES = {
+    goryoku: {
+      name: "剛力の宝薬G4",
+      materials: [
+        { id: 49228, name: "イヨラエキス" },
+        { id: 44051, name: "大聖水" },
+        { id: 44039, name: "ウィンドパセリ" },
+        { id: 46246, name: "紫電の霊砂" }
+      ]
+    },
+    shinryoku: {
+      name: "心力の宝薬G4",
+      materials: [
+        { id: 49228, name: "イヨラエキス" },
+        { id: 44051, name: "大聖水" },
+        { id: 44043, name: "パールグラス" },
+        { id: 46246, name: "紫電の霊砂" }
+      ]
+    }
+  };
 
   async function fetchPrice(dc, item) {
     const url = `https://universalis.app/api/v2/${dc}/${item.id}`;
@@ -82,18 +104,22 @@
   }
 
   async function fetchAll() {
+    const recipeKey = document.getElementById("recipe-select").value;
+    const recipe = RECIPES[recipeKey];
     const dc = document.getElementById("dc-select").value;
     const resultDiv = document.getElementById("result");
 
     resultDiv.innerHTML = `
-      <h2>${dc} DC</h2>
+      <h2>${recipe.name}</h2>
+      <div class="note">※ 作成に必要な素材の平均価格</div>
+      <h3>${dc} DC</h3>
       <div class="materials"></div>
     `;
 
     const materialsDiv = resultDiv.querySelector(".materials");
     let totalCost = 0;
 
-    for (const item of MATERIALS) {
+    for (const item of recipe.materials) {
       const price = await fetchPrice(dc, item);
 
       if (price !== null) {
@@ -110,3 +136,6 @@
       `<div class="total">原価合計：${totalCost.toLocaleString()} ギル</div>`;
   }
 </script>
+
+</body>
+</html>
