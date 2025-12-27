@@ -2,17 +2,17 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>FF14 レシピ原価チェッカー</title>
+<title>FF14 原価・利益チェッカー</title>https://github.com/jere27/ff14-price-checker/blob/main/index.html
 
 <style>
 body {
-  font-family: "Segoe UI", "Noto Sans JP", sans-serif;
+  font-family: "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
   background: #f4f6f8;
   padding: 30px;
 }
 
 .container {
-  max-width: 820px;
+  max-width: 760px;
   margin: auto;
 }
 
@@ -25,11 +25,13 @@ h1 {
   display: flex;
   gap: 10px;
   justify-content: center;
-  margin-bottom: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 25px;
 }
 
 select, button {
   padding: 10px 14px;
+  font-size: 14px;
   border-radius: 8px;
   border: 1px solid #ccc;
 }
@@ -40,44 +42,35 @@ button {
   border: none;
   cursor: pointer;
 }
+
 button:hover {
-  background: #1e40af;
+  background: #1e4ed8;
 }
 
 .card {
   background: white;
-  border-radius: 16px;
-  padding: 24px;
+  border-radius: 14px;
+  padding: 22px;
   box-shadow: 0 10px 25px rgba(0,0,0,0.08);
-}
-
-.header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.header img {
-  width: 48px;
-  height: 48px;
 }
 
 .note {
   font-size: 13px;
   color: #666;
-  margin: 10px 0 15px;
+  margin-bottom: 15px;
 }
 
 .price-box {
   display: flex;
-  gap: 15px;
-  margin-bottom: 15px;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
 }
 
 .price-item {
   background: #f1f5f9;
   border-radius: 10px;
-  padding: 12px;
+  padding: 12px 16px;
   flex: 1;
 }
 
@@ -92,28 +85,23 @@ button:hover {
 }
 
 .materials {
-  margin-top: 10px;
+  margin-top: 15px;
 }
 
 .material {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  justify-content: space-between;
   padding: 8px 0;
   border-bottom: 1px solid #eee;
 }
 
-.material img {
-  width: 28px;
-}
-
-.material-name {
-  flex: 1;
+.material:last-child {
+  border-bottom: none;
 }
 
 .profit {
-  margin-top: 20px;
-  font-size: 22px;
+  margin-top: 25px;
+  font-size: 24px;
   font-weight: bold;
   text-align: center;
 }
@@ -125,110 +113,116 @@ button:hover {
 
 <body>
 <div class="container">
-  <h1>FF14 レシピ原価チェッカー</h1>
 
-  <div class="controls">
-    <select id="recipe">
-      <option value="49234">剛力の宝薬G4</option>
-      <option value="49238">心力の宝薬G4</option>
-      <option value="49240">キャラメルポップコーン</option>
-    </select>
+<h1>FF14 原価・利益チェッカー</h1>
 
-    <select id="dc">
-      <option>Mana</option>
-      <option>Gaia</option>
-      <option>Elemental</option>
-      <option>Meteor</option>
-    </select>
+<div class="controls">
+  <select id="recipe">
+    <option value="goryoku">剛力の宝薬G4</option>
+    <option value="shinryoku">心力の宝薬G4</option>
+    <option value="caramel">キャラメルポップコーン</option>
+  </select>
 
-    <button id="fetchBtn">価格取得</button>
-  </div>
+  <select id="dc">
+    <option value="Mana">Mana</option>
+    <option value="Gaia">Gaia</option>
+    <option value="Elemental">Elemental</option>
+    <option value="Meteor">Meteor</option>
+  </select>
 
-  <div id="result"></div>
+  <button id="fetchBtn">価格取得</button>
+</div>
+
+<div id="result"></div>
 </div>
 
 <script>
-async function fetchJSON(url) {
-  const r = await fetch(url);
-  if (!r.ok) return null;
-  return await r.json();
-}
+const RECIPES = {
+  goryoku: {
+    name: "剛力の宝薬G4",
+    marketId: 49234,
+    output: 3,
+    materials: [
+      { id: 49228, name: "イヨラエキス", qty: 1 },
+      { id: 44051, name: "大聖水", qty: 1 },
+      { id: 44039, name: "ウィンドパセリ", qty: 1 },
+      { id: 46246, name: "紫電の霊砂", qty: 1 }
+    ]
+  },
+  shinryoku: {
+    name: "心力の宝薬G4",
+    marketId: 49238,
+    output: 3,
+    materials: [
+      { id: 49228, name: "イヨラエキス", qty: 1 },
+      { id: 44051, name: "大聖水", qty: 1 },
+      { id: 44043, name: "パールグラス", qty: 1 },
+      { id: 46246, name: "紫電の霊砂", qty: 1 }
+    ]
+  },
+  caramel: {
+    name: "キャラメルポップコーン",
+    marketId: 49240,
+    output: 3,
+    materials: [
+      { id: 49229, name: "フリントコーン", qty: 1 },
+      { id: 43976, name: "トラルコーンオイル", qty: 2 },
+      { id: 36080, name: "パームシュガー", qty: 1 },
+      { id: 36255, name: "オウヴィボスの乳", qty: 1 },
+      { id: 12895, name: "発酵バター", qty: 1 },
+      { id: 46246, name: "紫電の霊砂", qty: 1 }
+    ]
+  }
+};
 
-// Universalis：平均価格
 async function fetchAvg(dc, id) {
-  const d = await fetchJSON(`https://universalis.app/api/v2/${dc}/${id}`);
-  if (!d || !d.listings?.length) return null;
+  const r = await fetch(`https://universalis.app/api/v2/${dc}/${id}`);
+  if (!r.ok) return null;
+  const d = await r.json();
+  const list = d.listings || [];
+  if (!list.length) return null;
 
-  const list = d.listings.filter(l => l.hq);
-  const use = list.length ? list : d.listings;
+  const hq = list.filter(i => i.hq);
+  const use = hq.length ? hq : list;
 
   const prices = use
-    .sort((a,b)=>a.pricePerUnit-b.pricePerUnit)
+    .sort((a,b) => a.pricePerUnit - b.pricePerUnit)
     .slice(0,10)
-    .map(i=>i.pricePerUnit);
+    .map(i => i.pricePerUnit);
 
-  return Math.round(prices.reduce((a,b)=>a+b,0)/prices.length);
-}
-
-// XIVAPI：アイテム
-async function fetchItem(id) {
-  return await fetchJSON(`https://xivapi.com/item/${id}?language=ja`);
-}
-
-// XIVAPI：レシピ
-async function fetchRecipe(itemId) {
-  const search = await fetchJSON(`https://xivapi.com/recipe?ItemResult=${itemId}&language=ja`);
-  if (!search?.Results?.length) return null;
-  return await fetchJSON(`https://xivapi.com/recipe/${search.Results[0].ID}?language=ja`);
-}
-
-function extractIngredients(recipe) {
-  const list = [];
-  for (let i = 0; i < 10; i++) {
-    const item = recipe[`ItemIngredient${i}`];
-    const amount = recipe[`AmountIngredient${i}`];
-    if (item && amount > 0) {
-      list.push({ id: item.ID, name: item.Name, amount, icon: item.Icon });
-    }
-  }
-  return list;
+  return Math.round(prices.reduce((a,b)=>a+b,0) / prices.length);
 }
 
 async function fetchAll() {
-  const itemId = document.getElementById("recipe").value;
+  const recipe = RECIPES[document.getElementById("recipe").value];
   const dc = document.getElementById("dc").value;
   const result = document.getElementById("result");
 
-  result.innerHTML = "取得中…";
+  result.innerHTML = `<div class="card"><h2>${recipe.name}</h2></div>`;
+  const card = result.querySelector(".card");
 
-  const item = await fetchItem(itemId);
-  const recipe = await fetchRecipe(itemId);
-  const sell = await fetchAvg(dc, itemId);
-
-  const ingredients = extractIngredients(recipe);
+  let sell = await fetchAvg(dc, recipe.marketId);
 
   let cost = 0;
-  for (const m of ingredients) {
+  const mats = [];
+
+  for (const m of recipe.materials) {
     const p = await fetchAvg(dc, m.id);
-    m.price = p;
-    cost += p * m.amount;
+    if (p !== null) {
+      cost += p * m.qty;
+      mats.push({ ...m, price: p });
+    }
   }
 
-  const profit = sell * recipe.AmountResult - cost;
+  const profit = sell !== null ? sell * recipe.output - cost : null;
 
-  result.innerHTML = `
-  <div class="card">
-    <div class="header">
-      <img src="https://xivapi.com${item.Icon}">
-      <h2>${item.Name}</h2>
-    </div>
-
-    <div class="note">※ 1回の制作で ${recipe.AmountResult} 個完成</div>
+  card.innerHTML += `
+    <div class="note">※ 1回の製作で${recipe.output}個完成します</div>
 
     <div class="price-box">
       <div class="price-item">
         <div class="price-label">完成品相場（1個）</div>
-        <div class="price-value">${sell.toLocaleString()} ギル</div>
+        <div class="price-value">${sell?.toLocaleString() ?? "―"} ギル</div>
       </div>
       <div class="price-item">
         <div class="price-label">原価（1回分）</div>
@@ -236,21 +230,22 @@ async function fetchAll() {
       </div>
     </div>
 
-    <h3>素材</h3>
+    <h3>素材（1回分）</h3>
     <div class="materials">
-      ${ingredients.map(m=>`
+      ${mats.map(m => `
         <div class="material">
-          <img src="https://xivapi.com${m.icon}">
-          <div class="material-name">${m.name} ×${m.amount}</div>
-          <div>${m.price.toLocaleString()} ギル</div>
+          <span>${m.name} ×${m.qty}</span>
+          <span>${(m.price * m.qty).toLocaleString()} ギル</span>
         </div>
       `).join("")}
     </div>
 
-    <div class="profit ${profit>=0?"plus":"minus"}">
-      利益（1回分）：${profit.toLocaleString()} ギル
-    </div>
-  </div>`;
+    ${profit !== null ? `
+      <div class="profit ${profit >= 0 ? "plus" : "minus"}">
+        利益（1回分）：${profit.toLocaleString()} ギル
+      </div>
+    ` : ""}
+  `;
 }
 
 document.getElementById("fetchBtn").addEventListener("click", fetchAll);
