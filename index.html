@@ -2,35 +2,31 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>FF14 宝薬G4 原価チェッカー</title>
+<title>FF14 原価・利益チェッカー</title>
 
 <style>
-/* ---- ベース ---- */
 body {
   font-family: "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
   background: #f4f6f8;
-  margin: 0;
   padding: 30px;
 }
 
 .container {
-  max-width: 720px;
+  max-width: 760px;
   margin: auto;
 }
 
-/* ---- タイトル ---- */
 h1 {
   text-align: center;
   margin-bottom: 25px;
 }
 
-/* ---- コントロール ---- */
 .controls {
   display: flex;
   gap: 10px;
-  flex-wrap: wrap;
   justify-content: center;
-  margin-bottom: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 25px;
 }
 
 select, button {
@@ -51,7 +47,6 @@ button:hover {
   background: #1e4ed8;
 }
 
-/* ---- カード ---- */
 .card {
   background: white;
   border-radius: 14px;
@@ -59,24 +54,17 @@ button:hover {
   box-shadow: 0 10px 25px rgba(0,0,0,0.08);
 }
 
-/* ---- 見出し ---- */
-.card h2 {
-  margin-top: 0;
-}
-
-/* ---- 注記 ---- */
 .note {
   font-size: 13px;
   color: #666;
-  margin-bottom: 12px;
+  margin-bottom: 15px;
 }
 
-/* ---- 価格ブロック ---- */
 .price-box {
   display: flex;
   gap: 20px;
   flex-wrap: wrap;
-  margin-bottom: 15px;
+  margin-bottom: 20px;
 }
 
 .price-item {
@@ -96,10 +84,8 @@ button:hover {
   font-weight: bold;
 }
 
-/* ---- 素材 ---- */
 .materials {
   margin-top: 15px;
-  padding-left: 0;
 }
 
 .material {
@@ -113,71 +99,78 @@ button:hover {
   border-bottom: none;
 }
 
-/* ---- 利益 ---- */
 .profit {
-  margin-top: 20px;
-  font-size: 22px;
+  margin-top: 25px;
+  font-size: 24px;
   font-weight: bold;
   text-align: center;
 }
 
-.profit.plus {
-  color: #16a34a;
-}
-
-.profit.minus {
-  color: #dc2626;
-}
+.plus { color: #16a34a; }
+.minus { color: #dc2626; }
 </style>
 </head>
 
 <body>
-
 <div class="container">
 
-  <h1>FF14 宝薬G4 原価チェッカー</h1>
+<h1>FF14 原価・利益チェッカー</h1>
 
-  <div class="controls">
-    <select id="recipe">
-      <option value="goryoku">剛力の宝薬G4</option>
-      <option value="shinryoku">心力の宝薬G4</option>
-    </select>
+<div class="controls">
+  <select id="recipe">
+    <option value="goryoku">剛力の宝薬G4</option>
+    <option value="shinryoku">心力の宝薬G4</option>
+    <option value="caramel">キャラメルポップコーン</option>
+  </select>
 
-    <select id="dc">
-      <option value="Mana">Mana</option>
-      <option value="Gaia">Gaia</option>
-      <option value="Elemental">Elemental</option>
-      <option value="Meteor">Meteor</option>
-    </select>
+  <select id="dc">
+    <option value="Mana">Mana</option>
+    <option value="Gaia">Gaia</option>
+    <option value="Elemental">Elemental</option>
+    <option value="Meteor">Meteor</option>
+  </select>
 
-    <button id="fetchBtn">価格取得</button>
-  </div>
+  <button id="fetchBtn">価格取得</button>
+</div>
 
-  <div id="result"></div>
+<div id="result"></div>
 </div>
 
 <script>
-const OUTPUT = 3;
-
 const RECIPES = {
   goryoku: {
     name: "剛力の宝薬G4",
     marketId: 49234,
+    output: 3,
     materials: [
-      { id: 49228, name: "イヨラエキス" },
-      { id: 44051, name: "大聖水" },
-      { id: 44039, name: "ウィンドパセリ" },
-      { id: 46246, name: "紫電の霊砂" }
+      { id: 49228, name: "イヨラエキス", qty: 1 },
+      { id: 44051, name: "大聖水", qty: 1 },
+      { id: 44039, name: "ウィンドパセリ", qty: 1 },
+      { id: 46246, name: "紫電の霊砂", qty: 1 }
     ]
   },
   shinryoku: {
     name: "心力の宝薬G4",
-    marketId: null,
+    marketId: 49238,
+    output: 3,
     materials: [
-      { id: 49228, name: "イヨラエキス" },
-      { id: 44051, name: "大聖水" },
-      { id: 44043, name: "パールグラス" },
-      { id: 46246, name: "紫電の霊砂" }
+      { id: 49228, name: "イヨラエキス", qty: 1 },
+      { id: 44051, name: "大聖水", qty: 1 },
+      { id: 44043, name: "パールグラス", qty: 1 },
+      { id: 46246, name: "紫電の霊砂", qty: 1 }
+    ]
+  },
+  caramel: {
+    name: "キャラメルポップコーン",
+    marketId: 49230,
+    output: 3,
+    materials: [
+      { id: 49229, name: "フリントコーン", qty: 1 },
+      { id: 43976, name: "トラルコーンオイル", qty: 2 },
+      { id: 36080, name: "パームシュガー", qty: 1 },
+      { id: 36255, name: "オウヴィボスの乳", qty: 1 },
+      { id: 12895, name: "発酵バター", qty: 1 },
+      { id: 46246, name: "紫電の霊砂", qty: 1 }
     ]
   }
 };
@@ -208,10 +201,7 @@ async function fetchAll() {
   result.innerHTML = `<div class="card"><h2>${recipe.name}</h2></div>`;
   const card = result.querySelector(".card");
 
-  let sell = null;
-  if (recipe.marketId) {
-    sell = await fetchAvg(dc, recipe.marketId);
-  }
+  let sell = await fetchAvg(dc, recipe.marketId);
 
   let cost = 0;
   const mats = [];
@@ -219,20 +209,20 @@ async function fetchAll() {
   for (const m of recipe.materials) {
     const p = await fetchAvg(dc, m.id);
     if (p !== null) {
-      cost += p;
-      mats.push({ name: m.name, price: p });
+      cost += p * m.qty;
+      mats.push({ ...m, price: p });
     }
   }
 
-  const profit = sell !== null ? sell * OUTPUT - cost : null;
+  const profit = sell !== null ? sell * recipe.output - cost : null;
 
   card.innerHTML += `
-    <div class="note">※ 1回の製作で${OUTPUT}個完成します</div>
+    <div class="note">※ 1回の製作で${recipe.output}個完成します</div>
 
     <div class="price-box">
       <div class="price-item">
-        <div class="price-label">販売相場（1個）</div>
-        <div class="price-value">${sell ? sell.toLocaleString() : "―"} ギル</div>
+        <div class="price-label">完成品相場（1個）</div>
+        <div class="price-value">${sell?.toLocaleString() ?? "―"} ギル</div>
       </div>
       <div class="price-item">
         <div class="price-label">原価（1回分）</div>
@@ -242,12 +232,12 @@ async function fetchAll() {
 
     <h3>素材（1回分）</h3>
     <div class="materials">
-      ${mats.map(m =>
-        `<div class="material">
-          <span>${m.name}</span>
-          <span>${m.price.toLocaleString()} ギル</span>
-        </div>`
-      ).join("")}
+      ${mats.map(m => `
+        <div class="material">
+          <span>${m.name} ×${m.qty}</span>
+          <span>${(m.price * m.qty).toLocaleString()} ギル</span>
+        </div>
+      `).join("")}
     </div>
 
     ${profit !== null ? `
@@ -260,6 +250,5 @@ async function fetchAll() {
 
 document.getElementById("fetchBtn").addEventListener("click", fetchAll);
 </script>
-
 </body>
 </html>
