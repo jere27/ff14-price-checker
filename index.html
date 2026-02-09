@@ -30,13 +30,13 @@ select, button {
   border:1px solid #ccc;
 }
 button {
-  background:#2563eb;
+  background:#4f46e5;
   color:white;
   border:none;
   cursor:pointer;
 }
 button:hover {
-  background:#1e40af;
+  background:#4338ca;
 }
 .card {
   background:white;
@@ -53,24 +53,19 @@ button:hover {
   width:48px;
 }
 .note {
-  color:#666;
   font-size:13px;
-  margin:8px 0 14px;
+  color:#666;
 }
 .price-box {
   display:flex;
   gap:14px;
-  margin-bottom:14px;
+  margin:16px 0;
 }
 .price-item {
   background:#f1f5f9;
   border-radius:10px;
-  padding:12px;
+  padding:14px;
   flex:1;
-}
-.price-label {
-  font-size:12px;
-  color:#555;
 }
 .price-value {
   font-size:20px;
@@ -80,7 +75,7 @@ button:hover {
   display:flex;
   align-items:center;
   gap:10px;
-  padding:6px 0;
+  padding:8px 0;
   border-bottom:1px solid #eee;
 }
 .material img {
@@ -91,7 +86,6 @@ button:hover {
 }
 .sales {
   margin-top:10px;
-  font-size:15px;
 }
 .profit {
   margin-top:18px;
@@ -106,6 +100,7 @@ button:hover {
 
 <body>
 <div class="container">
+
 <h1>FF14 原価・販売数チェッカー</h1>
 
 <div class="controls">
@@ -131,105 +126,97 @@ button:hover {
 <script>
 const OUTPUT = 3;
 
-/* レシピ定義（安定運用） */
 const RECIPES = {
   goryoku: {
-    result: { id:49234, name:"剛力の宝薬G4" },
-    materials: [
-      { id:49228, name:"イヨラエキス", qty:1 },
-      { id:44051, name:"大聖水", qty:1 },
-      { id:44039, name:"ウィンドパセリ", qty:1 },
-      { id:46246, name:"紫電の霊砂", qty:1 }
+    result:{ id:49234 },
+    materials:[
+      { id:49228, qty:1 },
+      { id:44051, qty:1 },
+      { id:44039, qty:1 },
+      { id:46246, qty:1 }
     ]
   },
   shinryoku: {
-    result: { id:49238, name:"心力の宝薬G4" },
-    materials: [
-      { id:49228, name:"イヨラエキス", qty:1 },
-      { id:44051, name:"大聖水", qty:1 },
-      { id:44043, name:"パールグラス", qty:1 },
-      { id:46246, name:"紫電の霊砂", qty:1 }
+    result:{ id:49238 },
+    materials:[
+      { id:49228, qty:1 },
+      { id:44051, qty:1 },
+      { id:44043, qty:1 },
+      { id:46246, qty:1 }
     ]
   },
   popcorn: {
-    result: { id:49240, name:"キャラメルポップコーン" },
-    materials: [
-      { id:49229, name:"フリントコーン", qty:1 },
-      { id:43976, name:"トラルコーンオイル", qty:2 },
-      { id:36080, name:"パームシュガー", qty:1 },
-      { id:36255, name:"オウヴィボスの乳", qty:1 },
-      { id:12895, name:"発酵バター", qty:1 },
-      { id:46246, name:"紫電の霊砂", qty:1 }
+    result:{ id:49240 },
+    materials:[
+      { id:49229, qty:1 },
+      { id:43976, qty:2 },
+      { id:36080, qty:1 },
+      { id:36255, qty:1 },
+      { id:12895, qty:1 },
+      { id:46246, qty:1 }
     ]
   }
 };
 
-/* Universalis：価格平均 */
-async function fetchAvg(dc, id) {
-  const r = await fetch(`https://universalis.app/api/v2/${dc}/${id}`);
-  const d = await r.json();
-  const list = d.listings || [];
-  if (!list.length) return 0;
-
-  const hq = list.filter(l => l.hq);
-  const use = hq.length ? hq : list;
-
-  const prices = use
-    .sort((a,b) => a.pricePerUnit - b.pricePerUnit)
-    .slice(0,10)
-    .map(i => i.pricePerUnit);
-
-  return Math.round(prices.reduce((a,b)=>a+b,0) / prices.length);
-}
-
-/* Universalis：Mana DC 週間平均販売数 */
-async function fetchWeeklyAverageSales(itemId) {
-  const r = await fetch(`https://universalis.app/api/v2/Mana/${itemId}`);
-  const d = await r.json();
-
-  const now = Math.floor(Date.now() / 1000);
-  const weekAgo = now - 7 * 86400;
-
-  const total = (d.recentHistory || [])
-    .filter(h => h.timestamp >= weekAgo)
-    .reduce((s,h) => s + h.quantity, 0);
-
-  return Math.round(total / 7);
-}
-
-/* XIVAPI：アイテム（IconHD優先） */
 async function fetchItem(id) {
   const r = await fetch(`https://xivapi.com/item/${id}?language=ja`);
   return await r.json();
 }
 
+function itemName(item) {
+  return item.Name_ja || item.Name;
+}
+
 function iconUrl(item) {
-  return "https://xivapi.com" + (item.IconHD || item.Icon);
+  if (item.IconHD) return "https://xivapi.com" + item.IconHD;
+  if (item.Icon) return "https://xivapi.com" + item.Icon;
+  return "https://xivapi.com/i/000000/000405.png";
+}
+
+async function fetchAvg(dc, id) {
+  const r = await fetch(`https://universalis.app/api/v2/${dc}/${id}`);
+  const d = await r.json();
+  if (!d.listings?.length) return 0;
+  const prices = d.listings
+    .sort((a,b)=>a.pricePerUnit-b.pricePerUnit)
+    .slice(0,10)
+    .map(i=>i.pricePerUnit);
+  return Math.round(prices.reduce((a,b)=>a+b,0)/prices.length);
+}
+
+async function fetchWeeklySales(id) {
+  const r = await fetch(`https://universalis.app/api/v2/Mana/${id}`);
+  const d = await r.json();
+  const now = Math.floor(Date.now()/1000);
+  const weekAgo = now - 604800;
+  const total = (d.recentHistory||[])
+    .filter(h=>h.timestamp>=weekAgo)
+    .reduce((s,h)=>s+h.quantity,0);
+  return Math.round(total/7);
 }
 
 async function fetchAll() {
-  const dc = document.getElementById("dc").value;
   const recipe = RECIPES[document.getElementById("recipe").value];
+  const dc = document.getElementById("dc").value;
   const result = document.getElementById("result");
-
   result.innerHTML = "取得中…";
 
   const resultItem = await fetchItem(recipe.result.id);
   const sell = await fetchAvg(dc, recipe.result.id);
-  const weeklyAvg = await fetchWeeklyAverageSales(recipe.result.id);
+  const sales = await fetchWeeklySales(recipe.result.id);
 
   let cost = 0;
-  let matsHTML = "";
+  let mats = "";
 
   for (const m of recipe.materials) {
     const item = await fetchItem(m.id);
     const price = await fetchAvg(dc, m.id);
     cost += price * m.qty;
 
-    matsHTML += `
+    mats += `
       <div class="material">
         <img src="${iconUrl(item)}">
-        ${m.name} ×${m.qty}
+        ${itemName(item)} ×${m.qty}
         <span>${price.toLocaleString()} ギル</span>
       </div>`;
   }
@@ -240,31 +227,30 @@ async function fetchAll() {
   <div class="card">
     <div class="header">
       <img src="${iconUrl(resultItem)}">
-      <h2>${resultItem.Name}</h2>
+      <h2>${itemName(resultItem)}</h2>
     </div>
 
     <div class="note">※ 1回の制作で ${OUTPUT} 個完成</div>
 
     <div class="price-box">
       <div class="price-item">
-        <div class="price-label">完成品相場（1個）</div>
+        完成品相場（1個）
         <div class="price-value">${sell.toLocaleString()} ギル</div>
       </div>
       <div class="price-item">
-        <div class="price-label">原価（1回分）</div>
+        原価（1回分）
         <div class="price-value">${cost.toLocaleString()} ギル</div>
       </div>
     </div>
 
     <div class="sales">
-      Mana DC 週間平均販売数：
-      <b>${weeklyAvg}</b> 個 / 日
+      Mana DC 週間平均販売数：<b>${sales}</b> 個 / 日
     </div>
 
     <h3>素材</h3>
-    ${matsHTML}
+    ${mats}
 
-    <div class="profit ${profit >= 0 ? "plus" : "minus"}">
+    <div class="profit ${profit>=0?"plus":"minus"}">
       利益（1回分）：${profit.toLocaleString()} ギル
     </div>
   </div>`;
