@@ -83,7 +83,9 @@ button:hover {
   padding:6px 0;
   border-bottom:1px solid #eee;
 }
-.material img { width:28px; }
+.material img {
+  width:28px;
+}
 .material span:last-child {
   margin-left:auto;
 }
@@ -137,7 +139,7 @@ const RECIPES = {
       { id:49228, name:"イヨラエキス", qty:1 },
       { id:44051, name:"大聖水", qty:1 },
       { id:44039, name:"ウィンドパセリ", qty:1 },
-      { id:46246, name:"紫電の霊砂", qty:1 },
+      { id:46246, name:"紫電の霊砂", qty:1 }
     ]
   },
   shinryoku: {
@@ -146,7 +148,7 @@ const RECIPES = {
       { id:49228, name:"イヨラエキス", qty:1 },
       { id:44051, name:"大聖水", qty:1 },
       { id:44043, name:"パールグラス", qty:1 },
-      { id:46246, name:"紫電の霊砂", qty:1 },
+      { id:46246, name:"紫電の霊砂", qty:1 }
     ]
   },
   popcorn: {
@@ -157,51 +159,55 @@ const RECIPES = {
       { id:36080, name:"パームシュガー", qty:1 },
       { id:36255, name:"オウヴィボスの乳", qty:1 },
       { id:12895, name:"発酵バター", qty:1 },
-      { id:46246, name:"紫電の霊砂", qty:1 },
+      { id:46246, name:"紫電の霊砂", qty:1 }
     ]
   }
 };
 
 /* Universalis：価格平均 */
-async function fetchAvg(dc,id){
+async function fetchAvg(dc, id) {
   const r = await fetch(`https://universalis.app/api/v2/${dc}/${id}`);
   const d = await r.json();
   const list = d.listings || [];
   if (!list.length) return 0;
 
-  const hq = list.filter(l=>l.hq);
+  const hq = list.filter(l => l.hq);
   const use = hq.length ? hq : list;
 
   const prices = use
-    .sort((a,b)=>a.pricePerUnit-b.pricePerUnit)
+    .sort((a,b) => a.pricePerUnit - b.pricePerUnit)
     .slice(0,10)
-    .map(i=>i.pricePerUnit);
+    .map(i => i.pricePerUnit);
 
-  return Math.round(prices.reduce((a,b)=>a+b,0)/prices.length);
+  return Math.round(prices.reduce((a,b)=>a+b,0) / prices.length);
 }
 
 /* Universalis：Mana DC 週間平均販売数 */
-async function fetchWeeklyAverageSales(itemId){
+async function fetchWeeklyAverageSales(itemId) {
   const r = await fetch(`https://universalis.app/api/v2/Mana/${itemId}`);
   const d = await r.json();
 
-  const now = Math.floor(Date.now()/1000);
-  const weekAgo = now - 7*86400;
+  const now = Math.floor(Date.now() / 1000);
+  const weekAgo = now - 7 * 86400;
 
   const total = (d.recentHistory || [])
-    .filter(h=>h.timestamp>=weekAgo)
-    .reduce((s,h)=>s+h.quantity,0);
+    .filter(h => h.timestamp >= weekAgo)
+    .reduce((s,h) => s + h.quantity, 0);
 
-  return Math.round(total/7);
+  return Math.round(total / 7);
 }
 
-/* XIVAPI：アイコン */
-async function fetchItem(id){
+/* XIVAPI：アイテム（IconHD優先） */
+async function fetchItem(id) {
   const r = await fetch(`https://xivapi.com/item/${id}?language=ja`);
   return await r.json();
 }
 
-async function fetchAll(){
+function iconUrl(item) {
+  return "https://xivapi.com" + (item.IconHD || item.Icon);
+}
+
+async function fetchAll() {
   const dc = document.getElementById("dc").value;
   const recipe = RECIPES[document.getElementById("recipe").value];
   const result = document.getElementById("result");
@@ -215,14 +221,14 @@ async function fetchAll(){
   let cost = 0;
   let matsHTML = "";
 
-  for(const m of recipe.materials){
+  for (const m of recipe.materials) {
     const item = await fetchItem(m.id);
     const price = await fetchAvg(dc, m.id);
     cost += price * m.qty;
 
     matsHTML += `
       <div class="material">
-        <img src="https://xivapi.com${item.Icon}">
+        <img src="${iconUrl(item)}">
         ${m.name} ×${m.qty}
         <span>${price.toLocaleString()} ギル</span>
       </div>`;
@@ -233,7 +239,7 @@ async function fetchAll(){
   result.innerHTML = `
   <div class="card">
     <div class="header">
-      <img src="https://xivapi.com${resultItem.Icon}">
+      <img src="${iconUrl(resultItem)}">
       <h2>${resultItem.Name}</h2>
     </div>
 
@@ -258,7 +264,7 @@ async function fetchAll(){
     <h3>素材</h3>
     ${matsHTML}
 
-    <div class="profit ${profit>=0?"plus":"minus"}">
+    <div class="profit ${profit >= 0 ? "plus" : "minus"}">
       利益（1回分）：${profit.toLocaleString()} ギル
     </div>
   </div>`;
